@@ -6,6 +6,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type Todo struct {
@@ -111,7 +112,7 @@ func (m *model) Load() error {
 	return json.NewDecoder(f).Decode(&m.todos)
 }
 
-func (m model) Save() error {
+func (m *model) Save() error {
 	f, err := os.OpenFile(todosFile, os.O_CREATE|os.O_WRONLY, 0o666)
 	if err != nil {
 		return err
@@ -123,7 +124,7 @@ func (m model) View() string {
 	if m.quitting {
 		return "Quitting the program, Bye Bye\n"
 	}
-	s := "Welcome to Todo List" + "\n"
+	s := titleStyle.Render("Welcome to Todo List") + "\n"
 	for i, todo := range m.todos {
 		cursor := " "
 		if m.cursor == i {
@@ -133,16 +134,29 @@ func (m model) View() string {
 		if m.todos[i].Completed {
 			checked = "x"
 		}
-		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, todo.Title)
+		line := fmt.Sprintf("%s [%s] %s", cursor, checked, todo.Title)
+		if m.cursor == i {
+			line = selectedStyle.Render(line)
+		} else if m.todos[i].Completed {
+			line = completedStyle.Render(line)
+		}
+		s += line + "\n"
 	}
 	if m.inputMode {
-		s += "\n" + "> New todo: " + m.input + "_\n"
-		s += "Press enter to add, esc to cancel"
+		s += titleStyle.Render("\n> New todo: " + m.input + "_")
+		s += helpStyle.Render("Press enter to add, esc to cancel")
 	} else {
-		s += "Press space to toggle, d to delete, n to add"
+		s += helpStyle.Render("Press space to toggle, d to delete, n to add")
 	}
 	return s
 }
+
+var (
+	titleStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#7D56F4")).Bold(true).MarginBottom(1)
+	helpStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("#626262")).MarginTop(1)
+	selectedStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#7D56F4")).Bold(true)
+	completedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#808080")).Strikethrough(true)
+)
 
 func (m model) Init() tea.Cmd {
 	return nil
